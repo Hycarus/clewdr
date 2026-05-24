@@ -139,5 +139,13 @@ pub const fn default_skip_cool_down() -> bool {
     true
 }
 
+/// Default setting for stripping `context-1m-*` beta tokens from outgoing
+/// requests. Defaults to `true` because most Pro accounts do not have the
+/// long-context credit add-on, and forwarding the beta token reliably trips
+/// Anthropic's "Usage credits are required for long context requests." 429.
+pub const fn default_strip_long_context_beta() -> bool {
+    true
+}
+
 /// Default cookie value for testing purposes
 pub const PLACEHOLDER_COOKIE: &str = "sk-ant-sidXX----------------------------SET_YOUR_COOKIE_HERE----------------------------------------AAAAAAAA";

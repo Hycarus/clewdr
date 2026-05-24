@@ -38,6 +38,10 @@ pub struct ConfigApi {
     pub skip_rate_limit: bool,
     #[serde(default)]
     pub skip_normal_pro: bool,
+    /// Strip `context-1m-*` tokens from the outgoing `anthropic-beta` header
+    /// (default true — required for Pro accounts without long-context credits).
+    #[serde(default = "default_true")]
+    pub strip_long_context_beta: bool,
     #[serde(default)]
     pub use_real_roles: bool,
     pub custom_h: Option<String>,
@@ -46,4 +50,8 @@ pub struct ConfigApi {
     pub custom_prompt: String,
     pub claude_code_client_id: Option<String>,
     pub custom_system: Option<String>,
+}
+
+const fn default_true() -> bool {
+    true
 }

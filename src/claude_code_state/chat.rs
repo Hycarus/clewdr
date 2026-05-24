@@ -508,13 +508,23 @@ impl ClaudeCodeState {
     }
 
     fn build_beta_header(extra: Option<&str>) -> String {
+        let strip_long_context = CLEWDR_CONFIG.load().strip_long_context_beta;
         let mut parts = vec![CLAUDE_BETA_BASE.to_string()];
         if let Some(extra) = extra {
             for token in extra.split(',') {
                 let t = token.trim();
-                if !t.is_empty() {
-                    parts.push(t.to_string());
+                if t.is_empty() {
+                    continue;
                 }
+                // Anthropic gates 1M-context capability on the presence of
+                // this beta token, not actual prompt size, and returns 429
+                // for accounts without the long-context credit add-on. Strip
+                // it by default so Pro-tier subscriptions keep working.
+                if strip_long_context && t.starts_with("context-1m") {
+                    tracing::debug!("Stripping long-context beta token: {}", t);
+                    continue;
+                }
+                parts.push(t.to_string());
             }
         }
         parts.join(",")

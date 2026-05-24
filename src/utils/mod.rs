@@ -1,7 +1,7 @@
 use axum::body::Body;
 use colored::{ColoredString, Colorize};
 use tokio::spawn;
-use tracing::error;
+use tracing::{debug, error};
 use wreq::{Client, Proxy};
 use wreq_util::Emulation;
 
@@ -19,16 +19,25 @@ pub fn enabled(flag: bool) -> ColoredString {
     }
 }
 
-/// Helper function to print out JSON to a file in the log directory
+/// Dump JSON for debugging.
+///
+/// Always emits a `debug!` trace event tagged with `file_name` so the request
+/// body shows up in stdout / Docker container logs when
+/// `RUST_LOG=clewdr=debug`. Additionally writes the JSON to a file in
+/// `LOG_DIR` unless `no_fs` is set, preserving the legacy behavior.
 ///
 /// # Arguments
 /// * `json` - The JSON object to serialize and output
-/// * `file_name` - The name of the file to write in the log directory
+/// * `file_name` - Identifier used both as the on-disk filename and the log
+///   target label (e.g. `claude_code_client_req.json`).
 pub fn print_out_json(json: impl serde::ser::Serialize, file_name: &str) {
+    let text = serde_json::to_string_pretty(&json).unwrap_or_default();
+    // Always emit to the tracing log so Docker / journald users don't need
+    // a writable filesystem mount to inspect request bodies.
+    debug!(target: "clewdr::dump", file = file_name, "{}", text);
     if CLEWDR_CONFIG.load().no_fs {
         return;
     }
-    let text = serde_json::to_string_pretty(&json).unwrap_or_default();
     print_out_text(text, file_name);
 }
 

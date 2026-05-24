@@ -167,7 +167,8 @@
         "preserveChats": "Preserve Chats",
         "webSearch": "Web Search",
         "webCountTokens": "Enable web count_tokens",
-        "sanitizeMessages": "Sanitize messages (trim whitespace)"
+        "sanitizeMessages": "Sanitize messages (trim whitespace)",
+        "stripLongContextBeta": "Strip 1M context beta header (recommended for Pro accounts without long-context credits)"
       },
       "cookie": {
         "title": "Cookie Settings",

@@ -24,7 +24,8 @@ use crate::{
     Args,
     config::{
         CC_CLIENT_ID, CookieStatus, UselessCookie, default_check_update, default_ip,
-        default_max_retries, default_port, default_skip_cool_down, default_use_real_roles,
+        default_max_retries, default_port, default_skip_cool_down,
+        default_strip_long_context_beta, default_use_real_roles,
     },
     error::ClewdrError,
     utils::enabled,
@@ -111,6 +112,15 @@ pub struct ClewdrConfig {
     pub skip_rate_limit: bool,
     #[serde(default)]
     pub skip_normal_pro: bool,
+    /// Strip `context-1m-*` tokens from the upstream `anthropic-beta` header
+    /// before forwarding to Anthropic. Anthropic gates 1M-context capability
+    /// on the *presence of the beta token*, not the actual prompt size, and
+    /// returns HTTP 429 "Usage credits are required for long context
+    /// requests." on accounts (including Pro) that have not purchased extra
+    /// long-context credits. Enabling this lets such accounts keep working;
+    /// disable only if every cookie in the pool has the credit add-on.
+    #[serde(default = "default_strip_long_context_beta")]
+    pub strip_long_context_beta: bool,
 
     // Prompt configurations, can hot reload
     #[serde(default = "default_use_real_roles")]
@@ -162,6 +172,7 @@ impl Default for ClewdrConfig {
             skip_non_pro: false,
             skip_rate_limit: default_skip_cool_down(),
             skip_normal_pro: false,
+            strip_long_context_beta: default_strip_long_context_beta(),
             claude_code_client_id: None,
             custom_system: None,
             no_fs: false,
@@ -222,6 +233,11 @@ impl Display for ClewdrConfig {
         writeln!(f, "Skip rate limit: {}", enabled(self.skip_rate_limit))?;
         writeln!(
             f,
+            "Strip long-context beta: {}",
+            enabled(self.strip_long_context_beta)
+        )?;
+        writeln!(
+            f,
             "Web count_tokens: {}",
             enabled(self.enable_web_count_tokens)
         )?;
@@ -251,6 +267,7 @@ impl From<&ClewdrConfig> for clewdr_types::ConfigApi {
             skip_non_pro: c.skip_non_pro,
             skip_rate_limit: c.skip_rate_limit,
             skip_normal_pro: c.skip_normal_pro,
+            strip_long_context_beta: c.strip_long_context_beta,
             use_real_roles: c.use_real_roles,
             custom_h: c.custom_h.clone(),
             custom_a: c.custom_a.clone(),
@@ -283,6 +300,7 @@ impl From<clewdr_types::ConfigApi> for ClewdrConfig {
             skip_non_pro: c.skip_non_pro,
             skip_rate_limit: c.skip_rate_limit,
             skip_normal_pro: c.skip_normal_pro,
+            strip_long_context_beta: c.strip_long_context_beta,
             use_real_roles: c.use_real_roles,
             custom_h: c.custom_h,
             custom_a: c.custom_a,

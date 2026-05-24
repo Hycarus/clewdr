@@ -106,6 +106,7 @@ pub fn ConfigTab() -> impl IntoView {
                 "skip_non_pro" => c.skip_non_pro = checked,
                 "skip_rate_limit" => c.skip_rate_limit = checked,
                 "skip_normal_pro" => c.skip_normal_pro = checked,
+                "strip_long_context_beta" => c.strip_long_context_beta = checked,
                 "use_real_roles" => c.use_real_roles = checked,
                 _ => {}
             }
@@ -204,6 +205,7 @@ pub fn ConfigTab() -> impl IntoView {
                                         <Checkbox name="web_search" label=i18n.t("config.sections.api.webSearch") checked=cfg.web_search on_input=on_checkbox />
                                         <Checkbox name="enable_web_count_tokens" label=i18n.t("config.sections.api.webCountTokens") checked=cfg.enable_web_count_tokens on_input=on_checkbox />
                                         <Checkbox name="sanitize_messages" label=i18n.t("config.sections.api.sanitizeMessages") checked=cfg.sanitize_messages on_input=on_checkbox />
+                                        <Checkbox name="strip_long_context_beta" label=i18n.t("config.sections.api.stripLongContextBeta") checked=cfg.strip_long_context_beta on_input=on_checkbox />
                                     </div>
                                 </ConfigSection>
 
