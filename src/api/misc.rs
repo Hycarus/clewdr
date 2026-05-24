@@ -331,17 +331,7 @@ async fn augment_utilization(cookies: Vec<CookieStatus>, handle: CookieActorHand
     .await
 }
 
-async fn fetch_usage_percent(
-    cookie: CookieStatus,
-    handle: CookieActorHandle,
-) -> Option<(
-    u32,
-    Option<String>,
-    u32,
-    Option<String>,
-    u32,
-    Option<String>,
-)> {
+async fn fetch_usage_percent(cookie: CookieStatus, handle: CookieActorHandle) -> Usage {
     let oauth_handle = handle.clone();
     let fallback_cookie = cookie.clone();
     let fallback_cookie_name = fallback_cookie.cookie.to_string();
