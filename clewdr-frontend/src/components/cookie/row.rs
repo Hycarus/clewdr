@@ -88,6 +88,8 @@ pub fn ExhaustedRow(cookie: CookieStatus) -> impl IntoView {
     let i18n = use_i18n();
     let masked = utils::mask_str(&cookie.cookie, 6);
 
+    let reason = get_reason_text(&cookie.reason);
+
     let cooldown = if let Some(ts) = cookie.reset_time {
         format!(
             "{}: {}",
@@ -112,7 +114,10 @@ pub fn ExhaustedRow(cookie: CookieStatus) -> impl IntoView {
 
     view! {
         <div class="cookie-row">
-            <span class="text-mono text-xs truncate flex-1" style="color:#facc15">{masked}</span>
+            <div class="flex-1">
+                <span class="text-mono text-xs truncate" style="color:#facc15">{masked}</span>
+                <div class="text-xs text-dim">{reason}</div>
+            </div>
             <div class="row-sm">
                 <span class="text-xs text-dim">{cooldown}</span>
                 <DeleteBtn cookie=cookie.cookie />

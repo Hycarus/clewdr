@@ -15,6 +15,8 @@ pub struct CookieStatusApi {
     #[serde(default)]
     pub count_tokens_allowed: Option<bool>,
     #[serde(default)]
+    pub reason: Option<Reason>,
+    #[serde(default)]
     pub session_usage: UsageBreakdown,
     #[serde(default)]
     pub weekly_usage: UsageBreakdown,

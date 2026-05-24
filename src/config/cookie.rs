@@ -13,7 +13,7 @@ use snafu::{GenerateImplicitData, Location};
 use tracing::info;
 
 use crate::{
-    config::{PLACEHOLDER_COOKIE, TokenInfo},
+    config::{PLACEHOLDER_COOKIE, Reason, TokenInfo},
     error::ClewdrError,
 };
 
@@ -61,6 +61,9 @@ pub struct CookieStatus {
     pub reset_time: Option<i64>,
     #[serde(default)]
     pub count_tokens_allowed: Option<bool>,
+    /// Why the cookie is exhausted (rate-limited or restricted); None when valid
+    #[serde(default)]
+    pub reason: Option<Reason>,
 
     // New: Per-period usage breakdown
     #[serde(default)]
@@ -142,6 +145,7 @@ impl CookieStatus {
             token: None,
             reset_time,
             count_tokens_allowed: None,
+            reason: None,
 
             session_usage: UsageBreakdown::default(),
             weekly_usage: UsageBreakdown::default(),
@@ -172,6 +176,7 @@ impl CookieStatus {
             info!("Cookie reset time expired");
             return Self {
                 reset_time: None,
+                reason: None,
                 session_usage: UsageBreakdown::default(),
                 weekly_usage: UsageBreakdown::default(),
                 weekly_sonnet_usage: UsageBreakdown::default(),

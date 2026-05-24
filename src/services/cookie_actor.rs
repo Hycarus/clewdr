@@ -217,6 +217,7 @@ impl CookieActor {
             Reason::TooManyRequest(i) => {
                 find_remove(&cookie);
                 cookie.reset_time = Some(i);
+                cookie.reason = Some(Reason::TooManyRequest(i));
                 cookie.reset_window_usage();
                 if !state.exhausted.insert(cookie) {
                     return;
@@ -225,6 +226,7 @@ impl CookieActor {
             Reason::Restricted(i) => {
                 find_remove(&cookie);
                 cookie.reset_time = Some(i);
+                cookie.reason = Some(Reason::Restricted(i));
                 cookie.reset_window_usage();
                 if !state.exhausted.insert(cookie) {
                     return;
