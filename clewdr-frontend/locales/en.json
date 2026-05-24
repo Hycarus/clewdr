@@ -168,7 +168,7 @@
         "webSearch": "Web Search",
         "webCountTokens": "Enable web count_tokens",
         "sanitizeMessages": "Sanitize messages (trim whitespace)",
-        "stripLongContextBeta": "Strip 1M context beta header (recommended for Pro accounts without long-context credits)"
+        "stripLongContextBeta": "Strip 1M context beta header (workaround only — disable if your OAuth flow is on the subscription track)"
       },
       "cookie": {
         "title": "Cookie Settings",

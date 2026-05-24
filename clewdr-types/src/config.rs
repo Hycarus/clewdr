@@ -38,9 +38,11 @@ pub struct ConfigApi {
     pub skip_rate_limit: bool,
     #[serde(default)]
     pub skip_normal_pro: bool,
-    /// Strip `context-1m-*` tokens from the outgoing `anthropic-beta` header
-    /// (default true — required for Pro accounts without long-context credits).
-    #[serde(default = "default_true")]
+    /// Strip `context-1m-*` tokens from the outgoing `anthropic-beta` header.
+    /// Default false — Pro subscriptions include 1M context natively. Only
+    /// useful as a workaround when the OAuth flow is locked to the Console
+    /// (metered API) track.
+    #[serde(default)]
     pub strip_long_context_beta: bool,
     #[serde(default)]
     pub use_real_roles: bool,
@@ -50,8 +52,4 @@ pub struct ConfigApi {
     pub custom_prompt: String,
     pub claude_code_client_id: Option<String>,
     pub custom_system: Option<String>,
-}
-
-const fn default_true() -> bool {
-    true
 }

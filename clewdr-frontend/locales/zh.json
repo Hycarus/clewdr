@@ -168,7 +168,7 @@
         "webSearch": "网页搜索",
         "webCountTokens": "允许 Web 渠道调用 count_tokens",
         "sanitizeMessages": "消息清理（去除空白）",
-        "stripLongContextBeta": "剥离 1M 上下文 beta 标头（无长上下文额度的 Pro 账户建议开启）"
+        "stripLongContextBeta": "剥离 1M 上下文 beta 标头（仅作权宜方案；若 OAuth 走订阅通道请关闭）"
       },
       "cookie": {
         "title": "Cookie设置",

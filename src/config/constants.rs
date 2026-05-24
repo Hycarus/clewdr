@@ -140,11 +140,18 @@ pub const fn default_skip_cool_down() -> bool {
 }
 
 /// Default setting for stripping `context-1m-*` beta tokens from outgoing
-/// requests. Defaults to `true` because most Pro accounts do not have the
-/// long-context credit add-on, and forwarding the beta token reliably trips
-/// Anthropic's "Usage credits are required for long context requests." 429.
+/// requests.
+///
+/// Default is `false`. Pro subscriptions include 1M context on Opus 4.7 /
+/// Sonnet 4.6 natively — the "Usage credits are required for long context
+/// requests." 429 that some users see is a symptom of ClewdR's OAuth flow
+/// running against the Console / metered-API track instead of the
+/// subscription track (see `CC_REDIRECT_URI`), not a real entitlement
+/// problem. Set this to `true` only as a temporary workaround if the
+/// upstream OAuth track cannot be changed and your cookies lack metered
+/// credits.
 pub const fn default_strip_long_context_beta() -> bool {
-    true
+    false
 }
 
 /// Default cookie value for testing purposes
