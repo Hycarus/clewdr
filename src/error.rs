@@ -5,7 +5,6 @@ use axum::{
     extract::rejection::{JsonRejection, PathRejection, QueryRejection},
     response::IntoResponse,
 };
-use chrono::Utc;
 use colored::Colorize;
 use oauth2::{RequestTokenError, StandardErrorResponse, basic::BasicErrorResponseType};
 use serde::{Deserialize, Serialize};
@@ -362,14 +361,30 @@ impl CheckClaudeErr for Response {
         let inner_error = err.error;
         // check if the error is a rate limit error
         if status == 429 {
-            // Long-context 1M gating also uses 429; keep it as HTTP error so upper
-            // retry logic can downgrade to non-1M without cooling down the cookie.
-            let msg_lower = inner_error
+            let body_str = inner_error
                 .message
                 .as_str()
-                .map(|s| s.to_ascii_lowercase())
-                .unwrap_or_else(|| inner_error.message.to_string().to_ascii_lowercase());
-            if msg_lower.contains("extra usage is required for long context requests") {
+                .map(|s| s.to_string())
+                .unwrap_or_else(|| inner_error.message.to_string());
+            let msg_lower = body_str.to_ascii_lowercase();
+
+            // Entitlement / credit-gate errors that Anthropic surfaces as 429:
+            // the cookie itself is fine — the account just isn't entitled to
+            // this particular request (e.g. 1M long-context without extra
+            // credits). Propagate as an HTTP error so the calling client can
+            // see the real message and the cookie is not penalised.
+            //
+            // Anthropic has used both "extra usage is required for long
+            // context requests" and "Usage credits are required for long
+            // context requests."; match the common substring.
+            let is_entitlement_gate = msg_lower.contains("long context requests")
+                || (msg_lower.contains("usage credits") && msg_lower.contains("required"))
+                || (msg_lower.contains("extra usage") && msg_lower.contains("required"));
+            if is_entitlement_gate {
+                debug!(
+                    "429 entitlement gate (cookie NOT sidelined): {}",
+                    body_str
+                );
                 return Err(ClewdrError::ClaudeHttpError {
                     code: status,
                     inner: inner_error,
@@ -406,13 +421,24 @@ impl CheckClaudeErr for Response {
                     reason: Reason::TooManyRequest(ts),
                 });
             } else {
+                // No structured reset signal. Real Anthropic rate-limit
+                // responses always include either `resetsAt` in the body or
+                // the `anthropic-ratelimit-unified-reset` header. Without
+                // either, this is almost certainly an edge case (Cloudflare
+                // 429, account/entitlement issue, unknown gate) where
+                // sidelining the cookie would cascade into a thundering
+                // herd against the whole pool. Surface as HTTP error so the
+                // caller sees the real body and the cookie stays in
+                // rotation. The chat layer records this as `last_error` so
+                // the UI still shows the failure.
                 warn!(
-                    "Rate limit exceeded but no resetsAt in body or header; \
-                     falling back to 1h cooldown. body={}",
-                    inner_error.message
+                    "429 without resetsAt or unified-reset header; \
+                     propagating as HTTP error and keeping cookie in pool. body={}",
+                    body_str
                 );
-                return Err(ClewdrError::InvalidCookie {
-                    reason: Reason::TooManyRequest(Utc::now().timestamp() + 3600),
+                return Err(ClewdrError::ClaudeHttpError {
+                    code: status,
+                    inner: inner_error,
                 });
             }
         }
