@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(cargo check *)",
-      "Bash(rustup target *)"
+      "Bash(rustup target *)",
+      "WebSearch"
     ]
   }
 }

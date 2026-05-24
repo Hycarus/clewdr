@@ -239,33 +239,35 @@ pub async fn api_auth(AuthBearer(t): AuthBearer) -> StatusCode {
     StatusCode::OK
 }
 
-const MODEL_LIST: [&str; 26] = [
-    "claude-3-7-sonnet-20250219",
-    "claude-3-7-sonnet-20250219-thinking",
-    "claude-sonnet-4-20250514",
-    "claude-sonnet-4-20250514-thinking",
-    "claude-sonnet-4-20250514-1M",
-    "claude-sonnet-4-20250514-1M-thinking",
-    "claude-sonnet-4-5-20250929",
-    "claude-sonnet-4-5-20250929-thinking",
-    "claude-sonnet-4-5-20250929-1M",
-    "claude-sonnet-4-5-20250929-1M-thinking",
+/// Models advertised by `/v1/models` and `/code/v1/models`.
+///
+/// Only the latest version of each family is listed so the proxy matches what
+/// the official Claude desktop app exposes by default. The `/v1/messages`
+/// endpoint forwards `model` to Anthropic without consulting this list, so
+/// clients that already know an older versioned model name (e.g.
+/// `claude-sonnet-4-5-20250929`) can still send it directly — only the
+/// discovery list is trimmed.
+///
+/// Variants:
+///  * base                — default behavior
+///  * `-thinking`         — extended-thinking mode (ClewdR translates to the
+///                          upstream `thinking` field)
+///  * `-1M`               — 1M-context window (Anthropic gates this on
+///                          accounts without long-context credits; expect
+///                          HTTP 429 if the account isn't entitled)
+///  * `-1M-thinking`      — both of the above
+///
+/// Haiku is intentionally absent: Anthropic's Claude Code subscription path
+/// (which ClewdR's OAuth flow uses) does not currently expose Haiku.
+const MODEL_LIST: [&str; 8] = [
     "claude-sonnet-4-6",
     "claude-sonnet-4-6-thinking",
     "claude-sonnet-4-6-1M",
     "claude-sonnet-4-6-1M-thinking",
-    "claude-opus-4-20250514",
-    "claude-opus-4-20250514-thinking",
-    "claude-opus-4-1-20250805",
-    "claude-opus-4-1-20250805-thinking",
-    "claude-opus-4-5-20251101",
-    "claude-opus-4-5-20251101-thinking",
-    "claude-opus-4-5",
-    "claude-opus-4-5-thinking",
-    "claude-opus-4-6",
-    "claude-opus-4-6-thinking",
-    "claude-opus-4-6-1M",
-    "claude-opus-4-6-1M-thinking",
+    "claude-opus-4-7",
+    "claude-opus-4-7-thinking",
+    "claude-opus-4-7-1M",
+    "claude-opus-4-7-1M-thinking",
 ];
 
 /// API endpoint to get the list of available models
