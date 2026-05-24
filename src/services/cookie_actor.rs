@@ -373,7 +373,9 @@ impl Actor for CookieActor {
             }
             CookieActorMessage::Request(cache_hash, reply_port) => {
                 let result = self.dispatch(state, cache_hash);
-                reply_port.send(result)?;
+                if let Err(e) = reply_port.send(result) {
+                    warn!("CookieActor request reply port closed: {e}");
+                }
             }
             CookieActorMessage::GetStatus(reply_port) => {
                 let changed = Self::refresh_usage_windows(state);
@@ -381,11 +383,15 @@ impl Actor for CookieActor {
                     Self::save(state);
                 }
                 let status_info = Self::report(state);
-                reply_port.send(status_info)?;
+                if let Err(e) = reply_port.send(status_info) {
+                    warn!("CookieActor get_status reply port closed: {e}");
+                }
             }
             CookieActorMessage::Delete(cookie, reply_port) => {
                 let result = Self::delete(state, cookie.clone());
-                reply_port.send(result)?;
+                if let Err(e) = reply_port.send(result) {
+                    warn!("CookieActor delete reply port closed: {e}");
+                }
             }
         }
         Ok(())
