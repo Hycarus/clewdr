@@ -59,10 +59,26 @@ impl ClaudeWebState {
                 }
                 Err(e) => {
                     error!("{e}");
-                    // 429 error
-                    if let ClewdrError::InvalidCookie { reason } = e {
-                        state.return_cookie(Some(reason.to_owned())).await;
+                    // 429 / "this cookie is dead" errors carry a structured Reason
+                    if let ClewdrError::InvalidCookie { reason } = &e {
+                        let reason = reason.to_owned();
+                        state.return_cookie(Some(reason)).await;
                         continue;
+                    }
+                    // Non-rate-limit upstream HTTP error: record on the cookie
+                    // so the UI can show why this cookie last failed, then
+                    // hand the cookie back so the actor persists the update.
+                    if let ClewdrError::ClaudeHttpError { code, inner } = &e {
+                        let code_u16 = code.as_u16();
+                        let msg = inner
+                            .message
+                            .as_str()
+                            .map(|s| s.to_string())
+                            .unwrap_or_else(|| inner.message.to_string());
+                        if let Some(c) = state.cookie.as_mut() {
+                            c.record_http_error(code_u16, msg);
+                        }
+                        state.return_cookie(None).await;
                     }
                     return Err(e);
                 }

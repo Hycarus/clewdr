@@ -5,7 +5,7 @@ use super::usage::UsageDetails;
 use crate::{
     api,
     i18n::use_i18n,
-    types::{CookieStatus, Reason, UselessCookie},
+    types::{CookieLastError, CookieStatus, Reason, UselessCookie},
     utils::{self, format_iso, format_timestamp},
 };
 
@@ -42,6 +42,103 @@ fn DeleteBtn(cookie: String) -> impl IntoView {
     }
 }
 
+/// Short uppercase chip describing the raw reason variant.
+fn reason_tag(reason: &Option<Reason>) -> String {
+    let i = use_i18n();
+    let key = match reason {
+        None => "cookieStatus.status.tags.unknown",
+        Some(Reason::Free) => "cookieStatus.status.tags.free",
+        Some(Reason::Disabled) => "cookieStatus.status.tags.disabled",
+        Some(Reason::Banned) => "cookieStatus.status.tags.banned",
+        Some(Reason::Null) => "cookieStatus.status.tags.invalid",
+        Some(Reason::NormalPro) => "cookieStatus.status.tags.normalPro",
+        Some(Reason::Restricted(_)) => "cookieStatus.status.tags.restricted",
+        Some(Reason::TooManyRequest(_)) => "cookieStatus.status.tags.rateLimit",
+    };
+    i.t(key)
+}
+
+const TAG_STYLE: &str =
+    "display:inline-block;padding:0 0.4rem;border-radius:0.25rem;border:1px solid currentColor;\
+     font-size:0.65rem;font-weight:600;letter-spacing:0.05em;";
+
+/// Renders the account-warning chips (first/second/restricted) detected at
+/// bootstrap. Returns `None` when no warnings are active so the section can
+/// be omitted entirely.
+fn warning_chips(cookie: &CookieStatus) -> Option<impl IntoView + use<>> {
+    let i = use_i18n();
+    let entries: Vec<(String, i64, &'static str)> = [
+        (
+            cookie.first_warning_at,
+            "cookieStatus.status.warnings.firstWarning",
+            "#fbbf24",
+        ),
+        (
+            cookie.second_warning_at,
+            "cookieStatus.status.warnings.secondWarning",
+            "#f97316",
+        ),
+        (
+            cookie.restricted_at,
+            "cookieStatus.status.warnings.restricted",
+            "#ef4444",
+        ),
+    ]
+    .into_iter()
+    .filter_map(|(opt, key, color)| opt.map(|ts| (i.t(key), ts, color)))
+    .collect();
+
+    if entries.is_empty() {
+        return None;
+    }
+
+    let title = i.t("cookieStatus.status.warnings.title");
+    Some(view! {
+        <div>
+            <div class="text-xs text-dim">{title}</div>
+            <div class="row-sm" style="flex-wrap:wrap;gap:0.25rem;margin-top:0.25rem">
+                {entries.into_iter().map(|(label, ts, color)| {
+                    let style = format!("{TAG_STYLE}color:{color}");
+                    view! {
+                        <span style=style>
+                            {format!("{label} {}", format_timestamp(ts))}
+                        </span>
+                    }
+                }).collect::<Vec<_>>()}
+            </div>
+        </div>
+    })
+}
+
+/// Renders the cookie's last non-rate-limit upstream HTTP error, or `None`
+/// when no such error has been recorded.
+fn last_error_block(err: &Option<CookieLastError>) -> Option<impl IntoView + use<>> {
+    let i = use_i18n();
+    let err = err.as_ref()?;
+    let code = err.code.to_string();
+    let header = i.tf("cookieStatus.status.lastError.code", &[("code", &code)]);
+    let title = i.t("cookieStatus.status.lastError.title");
+    let at_label = i.t("cookieStatus.status.lastError.at");
+    let at = format_timestamp(err.at);
+    let message = err.message.clone();
+    Some(view! {
+        <div>
+            <div class="text-xs text-dim">{title}</div>
+            <div class="text-xs" style="margin-top:0.25rem;color:#f87171">
+                <span style=format!("{TAG_STYLE}color:#f87171;margin-right:0.4rem")>
+                    {header}
+                </span>
+                <span class="text-mono" style="white-space:pre-wrap;word-break:break-word">
+                    {message}
+                </span>
+                <div class="text-dim" style="margin-top:0.15rem">
+                    {at_label}" "{at}
+                </div>
+            </div>
+        </div>
+    })
+}
+
 #[component]
 pub fn ValidRow(cookie: CookieStatus) -> impl IntoView {
     let i18n = use_i18n();
@@ -49,6 +146,18 @@ pub fn ValidRow(cookie: CookieStatus) -> impl IntoView {
     let masked = utils::mask_str(&cookie.cookie, 6);
     let expanded = RwSignal::new(false);
 
+    let count_tokens_chip = cookie.count_tokens_allowed.map(|allowed| {
+        let (label_key, color) = if allowed {
+            ("cookieStatus.status.countTokensAllowed", "#4ade80")
+        } else {
+            ("cookieStatus.status.countTokensBlocked", "#f87171")
+        };
+        let style = format!("{TAG_STYLE}color:{color};margin-left:0.25rem");
+        view! { <span style=style>{i18n.t(label_key)}</span> }
+    });
+
+    let warnings = warning_chips(&cookie);
+    let last_err = last_error_block(&cookie.last_error);
     let details_cookie = cookie.clone();
 
     view! {
@@ -66,11 +175,14 @@ pub fn ValidRow(cookie: CookieStatus) -> impl IntoView {
                         class="icon-copy"
                         on:click=move |_| utils::copy_to_clipboard(cookie_str.get_value())
                     >"📋"</button>
+                    {count_tokens_chip}
                 </div>
 
                 <details style="margin-top:0.25rem">
                     <summary>{i18n.t("cookieStatus.meta.summary")}</summary>
                     <div class="stack-sm" style="margin-top:0.5rem">
+                        {warnings}
+                        {last_err}
                         <UsageDetails cookie=details_cookie />
                     </div>
                 </details>
@@ -88,7 +200,9 @@ pub fn ExhaustedRow(cookie: CookieStatus) -> impl IntoView {
     let i18n = use_i18n();
     let masked = utils::mask_str(&cookie.cookie, 6);
 
-    let reason = get_reason_text(&cookie.reason);
+    let reason_full = get_reason_text(&cookie.reason);
+    let tag_text = reason_tag(&cookie.reason);
+    let tag_style = format!("{TAG_STYLE}color:#facc15;margin-right:0.4rem");
 
     let cooldown = if let Some(ts) = cookie.reset_time {
         format!(
@@ -112,11 +226,26 @@ pub fn ExhaustedRow(cookie: CookieStatus) -> impl IntoView {
         i18n.t("cookieStatus.status.unknownReset")
     };
 
+    let warnings = warning_chips(&cookie);
+    let last_err = last_error_block(&cookie.last_error);
+    let details_cookie = cookie.clone();
+
     view! {
         <div class="cookie-row">
             <div class="flex-1">
-                <span class="text-mono text-xs truncate" style="color:#facc15">{masked}</span>
-                <div class="text-xs text-dim">{reason}</div>
+                <div class="row-sm">
+                    <span style=tag_style>{tag_text}</span>
+                    <span class="text-mono text-xs truncate" style="color:#facc15">{masked}</span>
+                </div>
+                <div class="text-xs text-dim">{reason_full}</div>
+                <details style="margin-top:0.25rem">
+                    <summary>{i18n.t("cookieStatus.meta.summary")}</summary>
+                    <div class="stack-sm" style="margin-top:0.5rem">
+                        {warnings}
+                        {last_err}
+                        <UsageDetails cookie=details_cookie />
+                    </div>
+                </details>
             </div>
             <div class="row-sm">
                 <span class="text-xs text-dim">{cooldown}</span>
@@ -130,10 +259,15 @@ pub fn ExhaustedRow(cookie: CookieStatus) -> impl IntoView {
 pub fn InvalidRow(cookie: UselessCookie) -> impl IntoView {
     let masked = utils::mask_str(&cookie.cookie, 6);
     let reason = get_reason_text(&cookie.reason);
+    let tag_text = reason_tag(&cookie.reason);
+    let tag_style = format!("{TAG_STYLE}color:#f87171;margin-right:0.4rem");
 
     view! {
         <div class="cookie-row">
-            <span class="text-mono text-xs truncate flex-1" style="color:#f87171">{masked}</span>
+            <div class="flex-1 row-sm">
+                <span style=tag_style>{tag_text}</span>
+                <span class="text-mono text-xs truncate" style="color:#f87171">{masked}</span>
+            </div>
             <div class="row-sm">
                 <span class="text-xs text-dim">{reason}</span>
                 <DeleteBtn cookie=cookie.cookie />

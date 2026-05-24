@@ -13,7 +13,7 @@ use serde_json::{Value, json};
 use snafu::Location;
 use strum::IntoStaticStr;
 use tokio::sync::oneshot;
-use tracing::{debug, error};
+use tracing::{debug, error, warn};
 use wreq::{Response, StatusCode, header::InvalidHeaderValue};
 
 use crate::{config::Reason, types::claude::Message};
@@ -376,6 +376,17 @@ impl CheckClaudeErr for Response {
                 });
             }
 
+            // Always log the raw body so unexpected 429 shapes can be diagnosed
+            // (e.g. missing `resetsAt`, vendor-specific window names).
+            debug!(
+                "429 body: {} | header anthropic-ratelimit-unified-reset={:?}",
+                inner_error.message,
+                reset_header
+                    .as_ref()
+                    .and_then(|h| h.to_str().ok())
+                    .unwrap_or("<absent>")
+            );
+
             // get the reset time from the error message
             let ts = inner_error.message["resetsAt"]
                 .as_i64()
@@ -395,7 +406,11 @@ impl CheckClaudeErr for Response {
                     reason: Reason::TooManyRequest(ts),
                 });
             } else {
-                error!("Rate limit exceeded, but no reset time provided");
+                warn!(
+                    "Rate limit exceeded but no resetsAt in body or header; \
+                     falling back to 1h cooldown. body={}",
+                    inner_error.message
+                );
                 return Err(ClewdrError::InvalidCookie {
                     reason: Reason::TooManyRequest(Utc::now().timestamp() + 3600),
                 });

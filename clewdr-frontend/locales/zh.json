@@ -80,6 +80,29 @@
         "restricted": "限制至",
         "rateLimited": "限速至",
         "unknown": "未知"
+      },
+      "tags": {
+        "rateLimit": "429",
+        "restricted": "受限",
+        "free": "免费",
+        "disabled": "禁用",
+        "banned": "封禁",
+        "normalPro": "PRO",
+        "invalid": "无效",
+        "unknown": "未知"
+      },
+      "countTokensAllowed": "count_tokens 可用",
+      "countTokensBlocked": "count_tokens 被拒",
+      "warnings": {
+        "title": "账户警告",
+        "firstWarning": "一级警告至",
+        "secondWarning": "二级警告至",
+        "restricted": "受限至"
+      },
+      "lastError": {
+        "title": "最近上游错误",
+        "code": "HTTP {{code}}",
+        "at": "于"
       }
     },
     "usage": {

@@ -29,9 +29,31 @@ pub struct CookieStatusApi {
     pub session_utilization: Option<f64>,
     pub seven_day_utilization: Option<f64>,
     pub seven_day_sonnet_utilization: Option<f64>,
+    pub seven_day_opus_utilization: Option<f64>,
     pub session_resets_at: Option<String>,
     pub seven_day_resets_at: Option<String>,
     pub seven_day_sonnet_resets_at: Option<String>,
+    pub seven_day_opus_resets_at: Option<String>,
+    /// Last detected `first_warning` flag expiry (epoch seconds, UTC).
+    #[serde(default)]
+    pub first_warning_at: Option<i64>,
+    /// Last detected `second_warning` flag expiry (epoch seconds, UTC).
+    #[serde(default)]
+    pub second_warning_at: Option<i64>,
+    /// Last detected `restricted` flag expiry (epoch seconds, UTC).
+    #[serde(default)]
+    pub restricted_at: Option<i64>,
+    /// Last non-rate-limit upstream HTTP error observed using this cookie.
+    #[serde(default)]
+    pub last_error: Option<CookieLastError>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq, Eq)]
+pub struct CookieLastError {
+    pub code: u16,
+    pub message: String,
+    /// Epoch seconds (UTC) when the error was recorded.
+    pub at: i64,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]

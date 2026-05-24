@@ -6,7 +6,7 @@ use std::{
     sync::LazyLock,
 };
 
-pub use clewdr_types::UsageBreakdown;
+pub use clewdr_types::{CookieLastError, UsageBreakdown};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use snafu::{GenerateImplicitData, Location};
@@ -101,6 +101,19 @@ pub struct CookieStatus {
     pub weekly_sonnet_has_reset: Option<bool>,
     #[serde(default)]
     pub weekly_opus_has_reset: Option<bool>,
+
+    /// Last detected `first_warning` flag expiry (epoch seconds, UTC).
+    #[serde(default)]
+    pub first_warning_at: Option<i64>,
+    /// Last detected `second_warning` flag expiry (epoch seconds, UTC).
+    #[serde(default)]
+    pub second_warning_at: Option<i64>,
+    /// Last detected `restricted` flag expiry (epoch seconds, UTC).
+    #[serde(default)]
+    pub restricted_at: Option<i64>,
+    /// Last non-rate-limit upstream HTTP error observed using this cookie.
+    #[serde(default)]
+    pub last_error: Option<CookieLastError>,
 }
 
 impl PartialEq for CookieStatus {
@@ -161,7 +174,36 @@ impl CookieStatus {
             weekly_has_reset: None,
             weekly_sonnet_has_reset: None,
             weekly_opus_has_reset: None,
+            first_warning_at: None,
+            second_warning_at: None,
+            restricted_at: None,
+            last_error: None,
         })
+    }
+
+    /// Record a non-rate-limit upstream HTTP error against this cookie.
+    /// Used by the request flow so the UI can show why the cookie last failed
+    /// without losing the response status code.
+    pub fn record_http_error(&mut self, code: u16, message: impl Into<String>) {
+        self.last_error = Some(CookieLastError {
+            code,
+            message: message.into(),
+            at: chrono::Utc::now().timestamp(),
+        });
+    }
+
+    /// Update the account-flag timestamps detected during bootstrap. `None`
+    /// entries clear the corresponding stored value so stale warnings expire
+    /// naturally once Anthropic stops reporting them.
+    pub fn set_bootstrap_flags(
+        &mut self,
+        first_warning_at: Option<i64>,
+        second_warning_at: Option<i64>,
+        restricted_at: Option<i64>,
+    ) {
+        self.first_warning_at = first_warning_at;
+        self.second_warning_at = second_warning_at;
+        self.restricted_at = restricted_at;
     }
 
     /// Checks if the cookie's reset time has expired

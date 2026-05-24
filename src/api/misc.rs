@@ -308,6 +308,8 @@ async fn augment_utilization(cookies: Vec<CookieStatus>, handle: CookieActorHand
                     seven_reset,
                     seven_day_sonnet,
                     sonnet_reset,
+                    seven_day_opus,
+                    opus_reset,
                 )) => {
                     let mut obj = base;
                     obj["session_utilization"] = json!(five_hour);
@@ -316,6 +318,8 @@ async fn augment_utilization(cookies: Vec<CookieStatus>, handle: CookieActorHand
                     obj["seven_day_resets_at"] = json!(seven_reset);
                     obj["seven_day_sonnet_utilization"] = json!(seven_day_sonnet);
                     obj["seven_day_sonnet_resets_at"] = json!(sonnet_reset);
+                    obj["seven_day_opus_utilization"] = json!(seven_day_opus);
+                    obj["seven_day_opus_resets_at"] = json!(opus_reset);
                     obj
                 }
                 None => base,
@@ -387,6 +391,8 @@ type Usage = Option<(
     Option<String>,
     u32,
     Option<String>,
+    u32,
+    Option<String>,
 )>;
 /// Extract the six usage fields from the usage JSON returned by either endpoint
 fn extract_usage_fields(usage: &serde_json::Value) -> Usage {
@@ -423,6 +429,17 @@ fn extract_usage_fields(usage: &serde_json::Value) -> Usage {
         .and_then(|o| o.get("resets_at"))
         .and_then(|v| v.as_str())
         .map(|s| s.to_string());
+    let seven_opus = usage
+        .get("seven_day_opus")
+        .and_then(|o| o.get("utilization"))
+        .and_then(|v| v.as_f64())
+        .map(|v| v.round() as u32)
+        .unwrap_or(0);
+    let opus_reset = usage
+        .get("seven_day_opus")
+        .and_then(|o| o.get("resets_at"))
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
     Some((
         five,
         five_reset,
@@ -430,5 +447,7 @@ fn extract_usage_fields(usage: &serde_json::Value) -> Usage {
         seven_reset,
         seven_sonnet,
         sonnet_reset,
+        seven_opus,
+        opus_reset,
     ))
 }

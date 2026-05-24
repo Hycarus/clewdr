@@ -80,6 +80,29 @@
         "restricted": "Restricted until",
         "rateLimited": "Rate limited until",
         "unknown": "Unknown"
+      },
+      "tags": {
+        "rateLimit": "429",
+        "restricted": "RESTRICTED",
+        "free": "FREE",
+        "disabled": "DISABLED",
+        "banned": "BANNED",
+        "normalPro": "PRO",
+        "invalid": "INVALID",
+        "unknown": "UNKNOWN"
+      },
+      "countTokensAllowed": "count_tokens OK",
+      "countTokensBlocked": "count_tokens blocked",
+      "warnings": {
+        "title": "Account warnings",
+        "firstWarning": "First warning until",
+        "secondWarning": "Second warning until",
+        "restricted": "Restricted until"
+      },
+      "lastError": {
+        "title": "Last upstream error",
+        "code": "HTTP {{code}}",
+        "at": "at"
       }
     },
     "usage": {

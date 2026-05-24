@@ -152,8 +152,12 @@ impl ClaudeWebState {
     ///
     /// # Returns
     /// * `Result<(), ClewdrError>` - Ok if the account can be used, or error with reason
-    fn check_flags(&self, acc_info: &Value, mut w: String) -> Result<(), ClewdrError> {
+    fn check_flags(&mut self, acc_info: &Value, mut w: String) -> Result<(), ClewdrError> {
         let Some(active_flags) = acc_info.get("active_flags").and_then(|a| a.as_array()) else {
+            // No active flags: clear any stale warning state we previously stored.
+            if let Some(c) = self.cookie.as_mut() {
+                c.set_bootstrap_flags(None, None, None);
+            }
             return Ok(());
         };
         let now = chrono::Utc::now();
@@ -181,6 +185,16 @@ impl ClaudeWebState {
         let restricted = find_flag("restricted");
         let second = find_flag("second_warning");
         let first = find_flag("first_warning");
+
+        // Persist flag expiries on the cookie regardless of skip_* config so the
+        // UI can surface them. Falls through to the existing skip logic below.
+        if let Some(c) = self.cookie.as_mut() {
+            c.set_bootstrap_flags(
+                first.as_ref().map(|(_, t)| t.timestamp()),
+                second.as_ref().map(|(_, t)| t.timestamp()),
+                restricted.as_ref().map(|(_, t)| t.timestamp()),
+            );
+        }
 
         for (f, t) in flag_time {
             let hours = t.to_utc() - now;
