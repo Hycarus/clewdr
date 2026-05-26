@@ -483,6 +483,17 @@ impl ClaudeCodeState {
         body: &CreateMessageParams,
     ) -> Result<wreq::Response, ClewdrError> {
         let beta_header = Self::build_beta_header(self.anthropic_beta_header.as_deref());
+        // The `/v1/messages/count_tokens` endpoint rejects `max_tokens` with
+        // 400 "Extra inputs are not permitted". Strip it before forwarding by
+        // routing through a serde_json::Value so we don't need a separate
+        // request struct.
+        let mut payload = serde_json::to_value(body).map_err(|e| ClewdrError::Whatever {
+            message: format!("Serialize count_tokens body error: {e}"),
+            source: Some(Box::new(e)),
+        })?;
+        if let Some(obj) = payload.as_object_mut() {
+            obj.remove("max_tokens");
+        }
         self.client
             .post(
                 self.endpoint
@@ -497,7 +508,7 @@ impl ClaudeCodeState {
             .header(USER_AGENT, CLAUDE_CODE_USER_AGENT)
             .header("anthropic-beta", beta_header)
             .header("anthropic-version", CLAUDE_API_VERSION)
-            .json(body)
+            .json(&payload)
             .send()
             .await
             .context(WreqSnafu {
